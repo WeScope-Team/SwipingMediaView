@@ -33,7 +33,6 @@ public struct SwipingMediaView: UIViewControllerRepresentable {
                 startingIndex: Int = 0) {
         self._currentIndex = currentIndex
         self.controllers = mediaItems.map {
-            print($0.shouldShowDownloadButton)
             let view = SwipingMediaItemView(mediaItem: $0,
                                             isPresented: isPresented)
             return UIHostingController(rootView: AnyView(view))
@@ -55,13 +54,7 @@ public struct SwipingMediaView: UIViewControllerRepresentable {
         
         public func pageViewController(_ pageViewController: UIPageViewController,
                                        viewControllerBefore viewController: UIViewController) -> UIViewController? {
-            guard let index = self.parent.controllers.firstIndex(of: viewController) else { return nil }
-            if index == 0 {
-                let vc = self.parent.controllers.last
-                vc?.view.frame = UIScreen.main.bounds
-                vc?.view.backgroundColor = .clear
-                return vc
-            }
+            guard let index = self.parent.controllers.firstIndex(of: viewController), index > 0 else { return nil }
             
             let vc = self.parent.controllers[index - 1]
             vc.view.frame = UIScreen.main.bounds
@@ -71,14 +64,8 @@ public struct SwipingMediaView: UIViewControllerRepresentable {
         
         public func pageViewController(_ pageViewController: UIPageViewController,
                                        viewControllerAfter viewController: UIViewController) -> UIViewController? {
-            guard let index = self.parent.controllers.firstIndex(of: viewController) else { return nil }
-            if index == self.parent.controllers.count - 1 {
-                let vc = self.parent.controllers.first
-                vc?.view.frame = UIScreen.main.bounds
-                vc?.view.backgroundColor = .clear
-                return vc
-            }
-            
+            guard let index = self.parent.controllers.firstIndex(of: viewController), index > 0 else { return nil }
+
             let vc = self.parent.controllers[index + 1]
             vc.view.frame = UIScreen.main.bounds
             vc.view.backgroundColor = .clear
@@ -206,7 +193,6 @@ public struct SwipingMediaItemView: View {
                             }
                             .onFailure { e in
                                 isLoadingError = true
-                                print("Error \(e)")
                             }
                             .resizable()
                             .scaledToFit()
@@ -238,6 +224,7 @@ public struct SwipingMediaItemView: View {
                         .loop(.constant(true))
                         .playbackControls(true)
                         .isMuted(false)
+    
                 }
             }
                           .if(mediaItem.type != .video) { view in
@@ -248,7 +235,7 @@ public struct SwipingMediaItemView: View {
                               )
                           }
             
-            if (swipingMediaViewSettings.isControlsVisible == true) {
+            if swipingMediaViewSettings.isControlsVisible == true, mediaItem.type != .video {
                 SwipingMediaItemViewControlsView(mediaItem: mediaItem,
                                                  isPresented: $isPresented)
                 .opacity((1 - yOffset) * 1.2)
@@ -264,13 +251,11 @@ public struct SwipingMediaItemView: View {
                 swipingMediaViewSettings.isControlsVisible = false
                 isPlaying = true
             }
-            print("item did apear", mediaItem.type)
         }
         .onWillDisappear{
             if (mediaItem.type == .video) {
                 isPlaying = false
             }
-            print("item willdisapear", mediaItem.type)
         }
         .if(mediaItem.type != .video) { view in
             view.ignoresSafeArea(.all)
@@ -280,6 +265,7 @@ public struct SwipingMediaItemView: View {
 
 public struct SwipingMediaItemViewControlsView: View {
     @Environment(\.safeAreaInsets) private var safeAreaInsets
+    @State
     var swipingMediaViewSettings: SwipingMediaViewSettings = SwipingMediaViewSettings.shared
     var mediaItem: SwipingMediaItem
     @Binding var isPresented: Bool
@@ -321,7 +307,6 @@ public struct SwipingMediaItemViewControlsView: View {
                                     
                                     if let err = error {
                                         // Do something with the error
-                                        print(err)
                                         return
                                     }
                                     
